@@ -27,6 +27,20 @@ class PDBChainsDataLoader(Dataset):
     def __len__(self):
         return len(self.chains)
 
+    def get_seq_from_fasta(self, path, chain):
+        seq_string = None
+        with open(path, 'r') as f:
+            seq_id = None
+            for line in f:
+                if line[0] == '>':
+                    seq_id = line[1:].split('|')[0].replace(':', '_')
+                else:
+                    if seq_id == chain:
+                        seq_string = line
+
+        assert seq_string is not None, 'Could not get sequence for chain {}'.format(chain)
+        return seq_string
+
     def __getitem__(self, item):
         """
         @NOTE: Only reading chain file here to be memory efficient
@@ -35,15 +49,7 @@ class PDBChainsDataLoader(Dataset):
         pdb_id, chain_id = chain.split('_')
         npy_path = os.path.join(self.chains_path, pdb_id, chain + '.npy')
         chain_data = np.load(npy_path)
-        # chain_tensor = torch.from_numpy(chain_data)
+        chain_tensor = torch.from_numpy(chain_data)
         fasta_path = os.path.join(self.chains_path, pdb_id, pdb_id + '.fst')
-        seq_string = None
-        with open(fasta_path, 'r') as f:
-            seq_id = None
-            for line in f:
-                if line[0] == '>':
-                    seq_id = line[1:].split('|')[0].replace(':', '_')
-                else:
-                    if seq_id == chain:
-                        seq_string = line
-        return chain_data, seq_string
+        seq_string = self.get_seq_from_fasta(fasta_path, chain)
+        return chain_tensor, seq_string

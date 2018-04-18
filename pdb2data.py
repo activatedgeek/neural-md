@@ -4,15 +4,20 @@ import numpy as np
 import threading
 import pyrosetta
 
-NUM_THREADS = 5
+NUM_THREADS = 1
+
 PDB_DIR = 'data/pdb'
 CHAINS_DIR = 'data/chains'
+
+# maximum count for atoms and chi angles (see get_max_counts.py)
+MAX_ATOM_COUNT = 27
+MAX_CHI_COUNT = 4
 
 RESIDUE_LETTERS = [
     'R', 'H', 'K',
     'D', 'E',
     'S', 'T', 'N', 'Q',
-    'C', 'U', 'G', 'P',
+    'C', 'G', 'P',
     'A', 'V', 'I', 'L', 'M', 'F', 'Y', 'W',
     'X' # Unknown
 ]
@@ -36,22 +41,30 @@ def aa_to_vector(pose, r_i):
         pose.phi(r_i),
         pose.psi(r_i),
         pose.omega(r_i),
-        # @TODO add max number of chi's
-        *residue.chi()
     ]
+
+    chi_angles = [
+        *residue.chi(),
+        # append extra zeros
+        *([0.0] * (MAX_CHI_COUNT - len(residue.chi())))
+    ]
+
     # normalize angles (-PI to PI)
     angles = list(map(lambda a: a / 180.0, angles))
 
-    # @TODO add max number of atoms
     # atom coordinates, concatenation of x,y,z of each atom
     coords = []
     for atom in residue.atoms():
         coords.extend(atom.xyz())
 
+    # append extra zeros for size consistency
+    coords.extend([0.0, 0.0, 0.0] * (MAX_ATOM_COUNT - residue.natoms()))
+
     one_hot_type = [0] * len(RESIDUE_LETTERS)
     one_hot_type[RESIDUE_LETTERS.index(letter)] = 1
 
-    return letter, [*coords, *angles, *one_hot_type]
+    feature_vector = [*coords, *angles, *chi_angles, *one_hot_type]
+    return letter, feature_vector
 
 
 def pdb_to_chains(pdb_path):
