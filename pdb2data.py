@@ -92,21 +92,19 @@ def pdb_to_chains(pdb_path):
 
 
 def chains_to_file(pdb_id, seqs, chains, out_folder=CHAINS_DIR):
-    # Write chain files
-    out_base = '{}/{}'.format(out_folder, pdb_id)
-
     try:
-        os.makedirs(out_base)
+        os.makedirs(out_folder)
     except OSError as e:
         if e.errno != os.errno.EEXIST:
             raise
 
-    with open('{}/{}.fst'.format(out_base, pdb_id), 'w') as f:
-        fasta = ''.join(map(lambda kv: '>{}:{}|PDBID|CHAIN|SEQUENCE\n{}\n'.format(pdb_id, kv[0], kv[1]), seqs.items()))
-        f.write(fasta)
+    for k, v in seqs.items():
+        fasta_string = '>{}:{}|PDBID|CHAIN|SEQUENCE\n{}\n'.format(pdb_id, k, v)
+        with open('{}/{}_{}.fst'.format(out_folder, pdb_id, k), 'w') as f:
+            f.write(fasta_string)
 
-    for i, (chain_id, chain) in enumerate(chains.items()):
-        out_path = '{}/{}_{}.npy'.format(out_base, pdb_id, chain_id)
+    for chain_id, chain in chains.items():
+        out_path = '{}/{}_{}.npy'.format(out_folder, pdb_id, chain_id)
         np.save(out_path, np.array(chain))
 
 
