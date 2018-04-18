@@ -4,7 +4,7 @@ import numpy as np
 import threading
 import pyrosetta
 
-NUM_THREADS = 1
+NUM_THREADS = 5
 
 PDB_DIR = 'data/pdb'
 CHAINS_DIR = 'data/chains'
