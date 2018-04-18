@@ -51,28 +51,6 @@ train_loader = Data.DataLoader(dataset=[channels, channels], batch_size=BATCH_SI
 # In[96]:
 
 
-class CNN(nn.Module):
-    def __init__(self):
-        super(CNN, self).__init__()
-        self.C=53
-        self.conv1_out=53
-        self.kernel_size=(5,1)
-        self.stride=1
-        self.padding=2
-        self.conv2_out=53
-        self.chainlength=30
-        self.hidden_size=chainlength
-        self.pool_size=4
-        self.conv1=nn.Sequential(nn.Conv1d(self.C,self.conv1_out,self.kernel_size,self.stride,self.padding),nn.ReLU(),nn.MaxPool1d(self.pool_size))
-        self.conv2=nn.Sequential(nn.Conv1d(self.conv1_out,self.conv2_out,self.kernel_size,self.stride,self.padding),nn.ReLU(),nn.MaxPool1d(self.pool_size))
-        self.out=nn.Linear(self.conv2_out*self.chainlength,self.hidden_size*self.chainlength)
-    
-    def forward(self, x):
-        x = self.conv1(x)
-        x = self.conv2(x)
-        x = x.view(x.size(0), -1)           # flatten the output of conv1 
-        output = self.out(x)
-        return output 
 
 
 cnn = CNN()
@@ -82,26 +60,7 @@ print(cnn)
 # In[97]:
 
 
-class DCNN(nn.Module):
-     def __init__(self):
-        super(DCNN, self).__init__()
-        self.C=53
-        self.deconv1_out=20
-        self.kernel_size=(5,1)
-        self.stride=1
-        self.padding=2
-        self.hidden_size=5
-        self.chainlength=30
-        self.pool_size=4
-        self.max_no_of_angles=23
-        self.deconv1=nn.Sequential(nn.ConvTranspose1d(self.hidden_size*self.chainlength,self.deconv1_out,self.kernel_size,self.stride,self.padding),nn.ReLU(),nn.MaxUnpool1d(self.pool_size))
-        self.deconv2=nn.Sequential(nn.ConvTranspose1d(self.deconv1_out,self.max_no_of_angles,self.kernel_size,self.stride,self.padding),nn.ReLU(),nn.MaxUnpool1d(self.pool_size))
-    
-     def forward(self, x):
-        x = self.deconv1(x)
-        output = self.deconv2(x)
-        return output
-    
+
 dcnn = DCNN()
 print(dcnn)
 
@@ -115,34 +74,7 @@ print(dcnn)
 # In[98]:
 
 
-class VAE(nn.Module):
-    def __init__(self):
-        super(VAE, self).__init__()
-        
-        self.chainlength=30
-        self.C=53
-        self.hidden_size=5
-       # self.input_size=
-        
-        self.encoder=CNN()
-        self.l1=nn.Linear(self.hidden_size*self.chainlength,self.hidden_size*self.chainlength)
-        self.l2=nn.Linear(self.hidden_size*self.chainlength,self.hidden_size*self.chainlength)
-        self.decoder=DCNN()
-        
-        def reparameterize(self, mu,log_sigma):
-            normal_eps=torch.randn(h,n)
-            reparam=mu+(torch.sqrt(log_sigma)*normal_eps)
-            return reparam
 
-
-        def forward(self, x):
-            z = self.encoder(x)
-            mu=self.l1(z)
-            log_sigma=self.l2(z)
-            mu=mu.view(self.chainlength,-1)
-            log_sigma=log_sigma(self.chainlength,-1)
-            z = self.reparameterize(mu,log_sigma)
-            return self.decoder(z),mu,log_sigma
 
 
 # In[99]:

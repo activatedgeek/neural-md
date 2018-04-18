@@ -1,8 +1,10 @@
 import os
+import math
 import numpy as np
+import threading
 import pyrosetta
-pyrosetta.init()
 
+NUM_THREADS = 5
 PDB_DIR = 'data/pdb'
 CHAINS_DIR = 'data/chains'
 
@@ -52,13 +54,7 @@ def aa_to_vector(pose, r_i):
     return letter, [*coords, *angles, *one_hot_type]
 
 
-def chains_to_file(pdb_path, out_folder):
-    """
-
-    :param pdb_path: Path to PDB file
-    :param out_folder: Path to output folder, where a folder with the PDB filename will be created
-    :return:
-    """
+def pdb_to_chains(pdb_path):
     pdb_file = os.path.basename(pdb_path)
     pdb_id, _ = os.path.splitext(pdb_file)
 
@@ -79,6 +75,10 @@ def chains_to_file(pdb_path, out_folder):
         except AssertionError as e:
             print('Could not vectorize residue {}: {}'.format(i, str(e)))
 
+    return seqs, chains
+
+
+def chains_to_file(pdb_id, seqs, chains, out_folder=CHAINS_DIR):
     # Write chain files
     out_base = '{}/{}'.format(out_folder, pdb_id)
 
@@ -97,11 +97,49 @@ def chains_to_file(pdb_path, out_folder):
         np.save(out_path, np.array(chain))
 
 
+def process_pdb_list(files):
+    for f in files:
+        pdb_id = os.path.splitext(f)[0]
+        pdb_path = os.path.join(PDB_DIR, f)
+        if os.path.isdir(os.path.join(CHAINS_DIR, pdb_id)):
+            print('{} already processed'.format(pdb_path))
+        else:
+            try:
+                seqs, chains = pdb_to_chains(pdb_path)
+                chains_to_file(pdb_id, seqs, chains)
+                print('Processed {}'.format(pdb_path))
+            except RuntimeError as e:
+                print('Unable to process {}: {}'.format(pdb_id, str(e)))
+
+
+class PDB2DataThread(threading.Thread):
+    def __init__(self, pdb_files):
+        super(PDB2DataThread, self).__init__()
+
+        self.pdb_files = pdb_files
+
+    def run(self):
+        process_pdb_list(self.pdb_files)
+
+
 def main():
-    for f in os.listdir(PDB_DIR):
-        if '.pdb' in f:
-            chains_to_file(os.path.join(PDB_DIR, f), CHAINS_DIR)
-        break
+    # Needed for PyRosetta to work
+    pyrosetta.init()
+
+    pdb_files = list(filter(lambda f: '.pdb' in f, os.listdir(PDB_DIR)))
+    total = len(pdb_files)
+    batch = math.ceil(total / NUM_THREADS)
+
+    thread_list = []
+    for i in range(NUM_THREADS):
+        pdb_file_batch = pdb_files[i * batch: (i + 1) * batch]
+        thread_list.append(PDB2DataThread(pdb_file_batch))
+
+    for t in thread_list:
+        t.start()
+
+    for t in thread_list:
+        t.join()
 
 
 if __name__ == '__main__':
