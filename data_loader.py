@@ -5,12 +5,12 @@ from torch.utils.data import Dataset
 
 
 class PDBChainsDataLoader(Dataset):
-    def __init__(self, cluster_path, chains_path, cluster_range):
+    def __init__(self, cluster_path, chains_path, cluster_ids):
         """
 
-        :param cluster_path: path to cluster file
+        :param cluster_path: path to cluster file, one cluster per line, space separated chain ids
         :param chains_path: path to chains folder
-        :param cluster_range: list of cluster id's to load via the data loader
+        :param cluster_ids: list of cluster id's to load via the data loader
         """
         self.cluster_path = cluster_path
         self.chains_path = chains_path
@@ -20,7 +20,7 @@ class PDBChainsDataLoader(Dataset):
         with open(cluster_path, 'r') as f:
             clust_id = 0
             for clust in f:
-                if clust_id in cluster_range:
+                if clust_id in cluster_ids:
                     self.chains.extend(clust.split())
                 clust_id += 1
 
@@ -31,8 +31,19 @@ class PDBChainsDataLoader(Dataset):
         """
         @NOTE: Only reading chain file here to be memory efficient
         """
-        chain_id = self.chains[item]
-        pdb_id = chain_id.split('_')
-        npy_path = os.path.join(self.chains_path, pdb_id, chain_id, '.npy')
+        chain = self.chains[item]
+        pdb_id, chain_id = chain.split('_')
+        npy_path = os.path.join(self.chains_path, pdb_id, chain + '.npy')
         chain_data = np.load(npy_path)
-        return torch.from_numpy(chain_data)
+        # chain_tensor = torch.from_numpy(chain_data)
+        fasta_path = os.path.join(self.chains_path, pdb_id, pdb_id + '.fst')
+        seq_string = None
+        with open(fasta_path, 'r') as f:
+            seq_id = None
+            for line in f:
+                if line[0] == '>':
+                    seq_id = line[1:].split('|')[0].replace(':', '_')
+                else:
+                    if seq_id == chain:
+                        seq_string = line
+        return chain_data, seq_string
