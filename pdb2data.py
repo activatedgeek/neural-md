@@ -109,6 +109,7 @@ def pdb_to_chains(pdb_path):
     for chain_id, (residue_l, residue_r) in chains.items():
         seq_string = ''
         chain_list = []
+        valid_chain = True
         for r_id in range(residue_l, residue_r + 1):
             try:
                 r_letter, r_vec = aa_to_vector(pose, r_id)
@@ -116,9 +117,11 @@ def pdb_to_chains(pdb_path):
                 chain_list.append(r_vec)
             except AssertionError as e:
                 print('Could not vectorize residue {}: {}, skipping chain {}'.format(r_id, str(e), chain_id))
-                continue
+                valid_chain = False
+                break
 
-        yield chain_id, seq_string, chain_list
+        if valid_chain:
+            yield chain_id, seq_string, chain_list
 
 
 def make_fasta(pdb_id, chain_id, seq):
@@ -137,18 +140,22 @@ def process_pdb_list(files):
         pdb_id = os.path.splitext(f)[0]
         pdb_path = os.path.join(PDB_DIR, f)
 
-        faa_path = '{}/{}.faa'.format(CHAINS_DIR, pdb_id)
-        if os.path.isfile(faa_path):
+        out_dir = os.path.join(CHAINS_DIR, pdb_id)
+        if os.path.isdir(out_dir):
             print('{} already processed'.format(pdb_path))
             continue
+        else:
+            os.makedirs(out_dir)
+
+        faa_path = os.path.join(out_dir, pdb_id + '.faa')
 
         with open(faa_path, 'w') as f:
             for chain_id, seq_string, chain_list in pdb_to_chains(pdb_path):
                 fasta_string = make_fasta(pdb_id, chain_id, seq_string)
                 f.write(fasta_string)
 
-                out_path = '{}/{}_{}.npy'.format(CHAINS_DIR, pdb_id, chain_id)
-                np.save(out_path, np.array(chain_list).T) # 109 x 64 numpy array
+                npy_path = os.path.join(out_dir, '{}_{}.npy'.format(pdb_id, chain_id))
+                np.save(npy_path, np.array(chain_list).T) # 109 x 64 numpy array
 
         print('Processed {}'.format(pdb_path))
         processed_count += 1

@@ -7,6 +7,7 @@ from torch.utils.data import Dataset
 class PDBChainsDataLoader(Dataset):
     NPY_EXT = '.npy'
     FASTA_EXT = '.faa'
+    DATA_DIM = (109, 64)
 
     def __init__(self, chains_path):
         """
@@ -16,12 +17,12 @@ class PDBChainsDataLoader(Dataset):
         self.chains_path = chains_path
 
         # Get a list of all chains from all FASTA files
-        self.chains = []
         # self.seq_strings = []
+        self.chains = []
 
-        for f_name in os.listdir(self.chains_path):
-            if self.FASTA_EXT in f_name:
-                faa_path = os.path.join(self.chains_path, f_name)
+        for pdb_id in os.listdir(self.chains_path):
+            if os.path.isdir(os.path.join(self.chains_path, pdb_id)):
+                faa_path = os.path.join(self.chains_path, pdb_id, pdb_id + self.FASTA_EXT)
                 with open(faa_path, 'r') as fasta:
                     for line in fasta:
                         if line[0] == '>':
@@ -38,10 +39,8 @@ class PDBChainsDataLoader(Dataset):
         @NOTE: Only reading numpy file here to be memory efficient
         """
         chain_id = self.chains[item]
-        npy_path = os.path.join(self.chains_path, chain_id + self.NPY_EXT)
+        npy_path = os.path.join(self.chains_path, chain_id.split('_')[0], chain_id + self.NPY_EXT)
         chain_data = np.load(npy_path)
+        assert chain_data.shape == self.DATA_DIM
         chain_tensor = torch.from_numpy(chain_data).float()
-
-        # seq_string = self.seq_strings[item]
-
         return chain_tensor
