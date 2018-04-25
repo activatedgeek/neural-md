@@ -6,9 +6,9 @@ import pyrosetta
 from neural_md import make_fasta, pdb_to_chains
 
 NUM_THREADS = 5
-
-PDB_DIR = 'data/pdb'
-CHAINS_DIR = 'data/chains'
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+PDB_DIR = os.path.join(BASE_DIR, 'data', 'pdb')
+CHAINS_DIR = os.path.join(BASE_DIR, 'data', 'chains')
 
 
 def process_pdb_list(files):

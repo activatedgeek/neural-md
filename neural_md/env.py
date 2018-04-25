@@ -3,6 +3,7 @@ import gym
 from gym import spaces
 import numpy as np
 import pyrosetta
+from neural_md import aa_to_vector
 
 
 class PyRosettaEnv(gym.Env):
@@ -19,29 +20,26 @@ class PyRosettaEnv(gym.Env):
         # Internal pose to run the episode
         self.sf = pyrosetta.get_fa_scorefxn()
         self.pose = None
-        self.state = None
 
     def reset(self):
         pdb_id = self.chain_id.split('_')[0]
         npy_file = os.path.join(self.chains_dir, pdb_id, self.chain_id + '.npy')
-        self.state = np.load(npy_file)
+        state = np.load(npy_file)
         seq_string = self._get_seq_string()
 
         self.pose = pyrosetta.pose_from_sequence(seq_string)
-        self._set_pose()
+        self._set_pose(state)
 
-        return self.state
+        return state
 
     def step(self, action):
         """
         :param action: 7 x chain_length numpy ndarray
         :return:
         """
+        self._set_pose_angles(action)
 
-        self.state[81, :] = action
-        self._set_pose()
-
-        return self.state, self.sf(self.pose), False, {}
+        return self._get_pose_state_vector(), self.sf(self.pose), False, {}
 
     def render(self, mode='human'):
         raise NotImplementedError
@@ -62,10 +60,18 @@ class PyRosettaEnv(gym.Env):
 
         assert False, 'could not find sequence string'
 
-    def _set_pose(self):
+    def _get_pose_state_vector(self):
+        result = []
+        for r_i in range(1, self.pose.total_residue() + 1):
+            _, vec = aa_to_vector(self.pose, r_i)
+            result.append(vec)
+
+        return np.array(result)
+
+    def _set_pose(self, state):
         nr = self.pose.total_residue()
         for r_i in range(1, nr + 1):
-            data = self.state[:, r_i - 1]
+            data = state[:, r_i - 1]
             na = self.pose.residue(r_i).natoms()
 
             # Set all coordinates
@@ -80,3 +86,16 @@ class PyRosettaEnv(gym.Env):
             chi_length = len(self.pose.residue(r_i).chi())
             for i in range(chi_length):
                 self.pose.set_chi(i + 1, r_i, data[84 + i] * 180.0)
+
+    def _set_pose_angles(self, angles):
+        nr = self.pose.total_residue()
+        for r_i in range(1, nr + 1):
+            data = angles[:, r_i - 1]
+
+            self.pose.set_phi(r_i, data[0] * 180.0)
+            self.pose.set_psi(r_i, data[1] * 180.0)
+            self.pose.set_omega(r_i, data[2] * 180.0)
+
+            chi_length = len(self.pose.residue(r_i).chi())
+            for i in range(chi_length):
+                self.pose.set_chi(i + 1, r_i, data[3 + i] * 180.0)

@@ -6,8 +6,7 @@ RESIDUE_LETTERS = [
     'D', 'E',
     'S', 'T', 'N', 'Q',
     'C', 'G', 'P',
-    'A', 'V', 'I', 'L', 'M', 'F', 'Y', 'W',
-    'X' # Unknown
+    'A', 'V', 'I', 'L', 'M', 'F', 'Y', 'W'
 ]
 
 NPY_EXT = '.npy'

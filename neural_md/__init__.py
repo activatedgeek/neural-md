@@ -7,3 +7,4 @@ from .constants import \
     DATA_DIM
 from .pdb_utils import aa_to_vector, pre_compute_chains, make_fasta, pdb_to_chains
 from .env import PyRosettaEnv
+from .data_loader import PDBChainsDataLoader

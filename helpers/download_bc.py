@@ -2,14 +2,17 @@ import os
 import requests
 import threading
 
-CLUSTER_FILE = 'data/bc-70.out'
+
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+CLUSTER_FILE = os.path.join(BASE_DIR, 'data', 'bc-70.out')
+PDB_DIR = os.path.join(BASE_DIR, 'data', 'pdb')
 
 # Maximum number of clusters to process
 MAX_CLUSTERS = 4
 MAX_THREADS = 4
 
 
-def download_pdb(pdb_id, target_dir='data/pdb'):
+def download_pdb(pdb_id, target_dir=PDB_DIR):
     path = '{}/{}.pdb'.format(target_dir, pdb_id)
     if os.path.isfile(path):
         print('{} already exists.'.format(path))
