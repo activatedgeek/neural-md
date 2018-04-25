@@ -2,13 +2,10 @@ import os
 import numpy as np
 import torch
 from torch.utils.data import Dataset
+from . import FASTA_EXT, NPY_EXT, DATA_DIM
 
 
 class PDBChainsDataLoader(Dataset):
-    NPY_EXT = '.npy'
-    FASTA_EXT = '.faa'
-    DATA_DIM = (109, 64)
-
     def __init__(self, chains_path):
         """
         Takes a folder which contains chain ".npy" files and ".fst" files
@@ -22,7 +19,7 @@ class PDBChainsDataLoader(Dataset):
 
         for pdb_id in os.listdir(self.chains_path):
             if os.path.isdir(os.path.join(self.chains_path, pdb_id)):
-                faa_path = os.path.join(self.chains_path, pdb_id, pdb_id + self.FASTA_EXT)
+                faa_path = os.path.join(self.chains_path, pdb_id, pdb_id + FASTA_EXT)
                 with open(faa_path, 'r') as fasta:
                     for line in fasta:
                         if line[0] == '>':
@@ -39,8 +36,8 @@ class PDBChainsDataLoader(Dataset):
         @NOTE: Only reading numpy file here to be memory efficient
         """
         chain_id = self.chains[item]
-        npy_path = os.path.join(self.chains_path, chain_id.split('_')[0], chain_id + self.NPY_EXT)
+        npy_path = os.path.join(self.chains_path, chain_id.split('_')[0], chain_id + NPY_EXT)
         chain_data = np.load(npy_path)
-        assert chain_data.shape == self.DATA_DIM
+        assert chain_data.shape == DATA_DIM
         chain_tensor = torch.from_numpy(chain_data).float()
         return chain_tensor

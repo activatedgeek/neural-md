@@ -33,7 +33,15 @@ class PyRosettaEnv(gym.Env):
         return self.state
 
     def step(self, action):
-        pass
+        """
+        :param action: 7 x chain_length numpy ndarray
+        :return:
+        """
+
+        self.state[81, :] = action
+        self._set_pose()
+
+        return self.state, self.sf(self.pose), False, {}
 
     def render(self, mode='human'):
         raise NotImplementedError
@@ -59,6 +67,8 @@ class PyRosettaEnv(gym.Env):
         for r_i in range(1, nr + 1):
             data = self.state[:, r_i - 1]
             na = self.pose.residue(r_i).natoms()
+
+            # Set all coordinates
             for a_i in range(na):
                 coords = list(data[a_i * 3:(a_i + 1) * 3])
                 self.pose.residue(r_i).set_xyz(a_i + 1, pyrosetta.rosetta.numeric.xyzVector_double_t(*coords))

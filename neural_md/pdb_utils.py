@@ -1,33 +1,13 @@
 import os
-import math
-import numpy as np
-import threading
 import pyrosetta
-
-NUM_THREADS = 5
-
-PDB_DIR = 'data/pdb'
-CHAINS_DIR = 'data/chains'
-
-# maximum count for atoms and chi angles (see get_max_counts.py)
-MAX_ATOM_COUNT = 27
-MAX_CHI_COUNT = 4
-
-RESIDUE_LETTERS = [
-    'R', 'H', 'K',
-    'D', 'E',
-    'S', 'T', 'N', 'Q',
-    'C', 'G', 'P',
-    'A', 'V', 'I', 'L', 'M', 'F', 'Y', 'W',
-    'X' # Unknown
-]
+from . import RESIDUE_LETTERS, MAX_CHI_COUNT, MAX_ATOM_COUNT
 
 
 def aa_to_vector(pose, r_i):
     """
     Convert Amino Acids to vector of angles, atom coordinates and one-hot encoded letter type
-    :param pose:
-    :param r_i:
+    :param pose: PyRosetta Pose
+    :param r_i: Residue number
     :return:
     """
     residue = pose.residue(r_i)
@@ -98,6 +78,10 @@ def pre_compute_chains(pose, batch_size=None):
     return chains
 
 
+def make_fasta(pdb_id, chain_id, seq):
+    return '>{}_{}|PDBID|CHAIN|SEQUENCE\n{}\n'.format(pdb_id, chain_id, seq)
+
+
 def pdb_to_chains(pdb_path):
     pdb_file = os.path.basename(pdb_path)
     pdb_id, _ = os.path.splitext(pdb_file)
@@ -122,76 +106,3 @@ def pdb_to_chains(pdb_path):
 
         if valid_chain:
             yield chain_id, seq_string, chain_list
-
-
-def make_fasta(pdb_id, chain_id, seq):
-    return '>{}_{}|PDBID|CHAIN|SEQUENCE\n{}\n'.format(pdb_id, chain_id, seq)
-
-
-def process_pdb_list(files):
-    try:
-        os.makedirs(CHAINS_DIR)
-    except OSError as e:
-        if e.errno != os.errno.EEXIST:
-            raise
-
-    processed_count = 0
-    for f in files:
-        pdb_id = os.path.splitext(f)[0]
-        pdb_path = os.path.join(PDB_DIR, f)
-
-        out_dir = os.path.join(CHAINS_DIR, pdb_id)
-        if os.path.isdir(out_dir):
-            print('{} already processed'.format(pdb_path))
-            continue
-        else:
-            os.makedirs(out_dir)
-
-        faa_path = os.path.join(out_dir, pdb_id + '.faa')
-
-        with open(faa_path, 'w') as f:
-            for chain_id, seq_string, chain_list in pdb_to_chains(pdb_path):
-                fasta_string = make_fasta(pdb_id, chain_id, seq_string)
-                f.write(fasta_string)
-
-                npy_path = os.path.join(out_dir, '{}_{}.npy'.format(pdb_id, chain_id))
-                np.save(npy_path, np.array(chain_list).T) # 109 x 64 numpy array
-
-        print('Processed {}'.format(pdb_path))
-        processed_count += 1
-
-    print('{}/{} new PDBs processed'.format(processed_count, len(files)))
-
-
-class PDB2DataThread(threading.Thread):
-    def __init__(self, pdb_files):
-        super(PDB2DataThread, self).__init__()
-
-        self.pdb_files = pdb_files
-
-    def run(self):
-        process_pdb_list(self.pdb_files)
-
-
-def main():
-    # Needed for PyRosetta to work
-    pyrosetta.init()
-
-    pdb_files = list(filter(lambda f: '.pdb' in f, os.listdir(PDB_DIR)))
-    total = len(pdb_files)
-    batch = math.ceil(total / NUM_THREADS)
-
-    thread_list = []
-    for i in range(NUM_THREADS):
-        pdb_file_batch = pdb_files[i * batch: (i + 1) * batch]
-        thread_list.append(PDB2DataThread(pdb_file_batch))
-
-    for t in thread_list:
-        t.start()
-
-    for t in thread_list:
-        t.join()
-
-
-if __name__ == '__main__':
-    main()

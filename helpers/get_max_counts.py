@@ -1,12 +1,5 @@
 import pyrosetta
-
-RESIDUE_LETTERS = [
-    'R', 'H', 'K',
-    'D', 'E',
-    'S', 'T', 'N', 'Q',
-    'C', 'G', 'P',
-    'A', 'V', 'I', 'L', 'M', 'F', 'Y', 'W'
-]
+from neural_md import RESIDUE_LETTERS
 
 ATOM_COUNT = [None] * len(RESIDUE_LETTERS)
 CHI_COUNT = [None] * len(RESIDUE_LETTERS)
